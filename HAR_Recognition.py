@@ -63,10 +63,12 @@ LEARNING_RATE = 0.0025
 def createBidirLSTM(X):
 
     W = {
+        'hidden': tf.Variable(tf.random_normal([N_FEATURES, 2*N_HIDDEN_NEURONS])),
         'output': tf.Variable(tf.random_normal([2*N_HIDDEN_NEURONS, N_CLASSES]))
     }
 
     b = {
+        'hidden': tf.Variable(tf.random_normal([2*N_HIDDEN_NEURONS], mean=1.0)),
         'output': tf.Variable(tf.Variable(tf.random_normal([N_CLASSES])))
     }
 
@@ -74,10 +76,12 @@ def createBidirLSTM(X):
     X = tf.unstack(X, SEGMENT_TIME_SIZE, 1)
 
     # Stack two LSTM cells on top of each other
-    lstm_fw_cell = tf.contrib.rnn.BasicLSTMCell(N_HIDDEN_NEURONS, forget_bias=1.0)
-    lstm_bw_cell = tf.contrib.rnn.BasicLSTMCell(N_HIDDEN_NEURONS, forget_bias=1.0)
+    lstm_fw_cell_1 = tf.contrib.rnn.BasicLSTMCell(N_HIDDEN_NEURONS, forget_bias=1.0)
+    lstm_fw_cell_2 = tf.contrib.rnn.BasicLSTMCell(N_HIDDEN_NEURONS, forget_bias=1.0)
+    lstm_bw_cell_1 = tf.contrib.rnn.BasicLSTMCell(N_HIDDEN_NEURONS, forget_bias=1.0)
+    lstm_bw_cell_2 = tf.contrib.rnn.BasicLSTMCell(N_HIDDEN_NEURONS, forget_bias=1.0)
 
-    outputs, _, _ = tf.contrib.rnn.static_bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, X, dtype=tf.float32)
+    outputs, _, _ = tf.contrib.rnn.stack_bidirectional_rnn([lstm_fw_cell_1, lstm_fw_cell_2], [lstm_bw_cell_1, lstm_bw_cell_2], X, dtype=tf.float32)
 
     # Get output for the last time step from a "many to one" architecture
     last_output = outputs[-1]

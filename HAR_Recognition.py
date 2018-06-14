@@ -1,17 +1,18 @@
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-import seaborn as sns
 from scipy import stats
 from pylab import rcParams
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
+from bayes_opt import BayesianOptimization
 
 import pickle
 
 import matplotlib
-#matplotlib.use('Agg')   # Use Agg backend to save figures
 import matplotlib.pyplot as plt
+
+from tempfile import TemporaryFile
 
 ##################################################
 ### GLOBAL VARIABLES
@@ -39,7 +40,6 @@ DATA_PATH = 'data/WISDM_ar_v1.1_raw.txt'
 RANDOM_SEED = 13
 
 # Data preprocessing
-SEGMENT_TIME_SIZE = 200
 TIME_STEP = 100
 
 # Model
@@ -48,11 +48,12 @@ N_FEATURES = 3  # x-acceleration, y-acceleration, z-acceleration
 
 # Hyperparameters
 N_LSTM_LAYERS = 2
-N_HIDDEN_NEURONS = 32
-N_EPOCHS = 50
-BATCH_SIZE = 64
+N_EPOCHS = 1
 L2_LOSS = 0.0015
 LEARNING_RATE = 0.0025
+
+# Hyperparameters-optimized (Bayesian optimization appends to that list)
+hyperparametersOptimized = {'SEGMENT_TIME_SIZE': [], 'N_HIDDEN_NEURONS': [], 'BATCH_SIZE': [], 'ACCURACY': []}
 
 ##################################################
 ### FUNCTIONS
@@ -60,7 +61,7 @@ LEARNING_RATE = 0.0025
 
 # Returns a tenforflow LSTM NN
 # Input of shape (BATCH_SIZE, SEGMENT_TIME_SIZE, N_FEATURES)
-def createBidirLSTM(X):
+def createBidirLSTM(X, SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS):
 
     W = {
         'hidden': tf.Variable(tf.random_normal([N_FEATURES, 2*N_HIDDEN_NEURONS])),
@@ -87,30 +88,20 @@ def createBidirLSTM(X):
     last_output = outputs[-1]
     return tf.matmul(last_output, W['output'] + b['output'])
 
-##################################################
-### MAIN
-##################################################
-if __name__ == '__main__':
 
-    # LOAD DATA
-    data = pd.read_csv(DATA_PATH, header=None, names=COLUMN_NAMES)
-    data['z-axis'].replace({';': ''}, regex=True, inplace=True)
-    data = data.dropna()
+def evaluate(SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS, BATCH_SIZE):
 
-    # SHOW GRAPH FOR JOGGING
-    #data[data['activity'] == 'Jogging'][['x-axis']][:50].plot(subplots=True, figsize=(16, 12), title='Jogging')
-    #plt.xlabel('Timestep')
-    #plt.ylabel('X acceleration (dg)')
-
-    # SHOW ACTIVITY GRAPH
-    #activity_type = data['activity'].value_counts().plot(kind='bar', title='Activity type')
+    # Convert to int (Bayesian optimization might select float values)
+    SEGMENT_TIME_SIZE = int(SEGMENT_TIME_SIZE)
+    N_HIDDEN_NEURONS = int(N_HIDDEN_NEURONS)
+    BATCH_SIZE = int(BATCH_SIZE)
 
     # DATA PREPROCESSING
     data_convoluted = []
     labels = []
 
-
     # Slide a "SEGMENT_TIME_SIZE" wide window with a step size of "TIME_STEP"
+    # print("SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS, BATCH_SIZE: ", SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS, BATCH_SIZE)
     for i in range(0, len(data) - SEGMENT_TIME_SIZE, TIME_STEP):
         x = data['x-axis'].values[i: i + SEGMENT_TIME_SIZE]
         y = data['y-axis'].values[i: i + SEGMENT_TIME_SIZE]
@@ -126,25 +117,19 @@ if __name__ == '__main__':
 
     # One-hot encoding
     labels = np.asarray(pd.get_dummies(labels), dtype=np.float32)
-    print("Convoluted data shape: ", data_convoluted.shape)
-    print("Labels shape:", labels.shape)
-
 
     # SPLIT INTO TRAINING AND TEST SETS
     X_train, X_test, y_train, y_test = train_test_split(data_convoluted, labels, test_size=0.3, random_state=RANDOM_SEED)
-    print("X train size: ", len(X_train))
-    print("X test size: ", len(X_test))
-    print("y train size: ", len(y_train))
-    print("y test size: ", len(y_test))
-
-
 
     ##### BUILD A MODEL
+    # Reset compuitational graph
+    tf.reset_default_graph()
+
     # Placeholders
     X = tf.placeholder(tf.float32, [None, SEGMENT_TIME_SIZE, N_FEATURES], name="X")
     y = tf.placeholder(tf.float32, [None, N_CLASSES])
 
-    y_pred = createBidirLSTM(X)
+    y_pred = createBidirLSTM(X, SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS)
     y_pred_softmax = tf.nn.softmax(y_pred)
 
     # LOSS
@@ -169,48 +154,37 @@ if __name__ == '__main__':
         for start, end in zip(range(0, train_count, BATCH_SIZE), range(BATCH_SIZE, train_count + 1, BATCH_SIZE)):
             sess.run(optimizer, feed_dict={X: X_train[start:end], y: y_train[start:end]})
 
-        _, acc_train, loss_train = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_train, y: y_train})
-        _, acc_test, loss_test = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})
-
-        history['train_loss'].append(loss_train)
-        history['train_acc'].append(acc_train)
-        history['test_loss'].append(loss_test)
-        history['test_acc'].append(acc_test)
-
-        if(i % 5 != 0):
-            continue
-
-        print(f'epoch: {i} test accuracy: {acc_test} loss: {loss_test}')
-
     predictions, acc_final, loss_final = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})
-    print(f'final results: accuracy: {acc_final} loss: {loss_final}')
 
-    # PLOT GRAPHS
-    error_plot = plt.figure(figsize=(12, 8))
+    hyperparametersOptimized['SEGMENT_TIME_SIZE'].append(SEGMENT_TIME_SIZE)
+    hyperparametersOptimized['N_HIDDEN_NEURONS'].append(N_HIDDEN_NEURONS)
+    hyperparametersOptimized['BATCH_SIZE'].append(BATCH_SIZE)
+    hyperparametersOptimized['ACCURACY'].append(acc_final)
 
-    plt.plot(np.array(history['train_loss']), "r--", label="Train loss")
-    plt.plot(np.array(history['train_acc']), "b--", label="Train accuracy")
+    return acc_final
 
-    plt.plot(np.array(history['test_loss']), "r-", label="Test loss")
-    plt.plot(np.array(history['test_acc']), "b-", label="Test accuracy")
+##################################################
+### MAIN
+##################################################
+if __name__ == '__main__':
 
-    plt.title("Training session's progress over iterations")
-    plt.legend(loc='upper right', shadow=True)
-    plt.ylabel('Training Progress (Loss or Accuracy values)')
-    plt.xlabel('Training Epoch')
-    plt.ylim(0)
-    error_plot.savefig('error_plot.png')
-    #plt.show()
+    # LOAD DATA
+    data = pd.read_csv(DATA_PATH, header=None, names=COLUMN_NAMES)
+    data['z-axis'].replace({';': ''}, regex=True, inplace=True)
+    data = data.dropna()
 
+    gp_params = {"alpha": 1e-5}
+    evaluateBO = BayesianOptimization(evaluate, {'SEGMENT_TIME_SIZE': (100, 200),
+                                                 'N_HIDDEN_NEURONS': (10, 20),
+                                                 'BATCH_SIZE': (32, 64)})
 
-    # CONFUSION MATRIX
-    max_test = np.argmax(y_test, axis=1)
-    max_predictions = np.argmax(predictions, axis=1)
-    confusion_matrix = metrics.confusion_matrix(max_test, max_predictions)
+    evaluateBO.explore({'SEGMENT_TIME_SIZE': [100, 200],
+                        'N_HIDDEN_NEURONS': [10, 20],
+                        'BATCH_SIZE': [32, 64]})
+                        
+    evaluateBO.maximize(n_iter=1, **gp_params)
 
-    plt.figure(figsize=(16, 14))
-    sns.heatmap(confusion_matrix/(np.sum(confusion_matrix, axis=1, keepdims=1)), xticklabels=LABELS, yticklabels=LABELS, annot=True);
-    plt.title("Confusion matrix")
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.show();
+    print('Final Results')
+    print('Evaluation: %f' % evaluateBO.res['max']['max_val'])
+
+    np.save('hyperparametersOptimized.npy', hyperparametersOptimized)

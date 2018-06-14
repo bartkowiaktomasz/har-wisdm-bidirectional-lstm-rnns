@@ -48,7 +48,7 @@ N_FEATURES = 3  # x-acceleration, y-acceleration, z-acceleration
 
 # Hyperparameters
 N_LSTM_LAYERS = 2
-N_EPOCHS = 1
+N_EPOCHS = 30
 L2_LOSS = 0.0015
 LEARNING_RATE = 0.0025
 
@@ -174,14 +174,14 @@ if __name__ == '__main__':
     data = data.dropna()
 
     gp_params = {"alpha": 1e-5}
-    evaluateBO = BayesianOptimization(evaluate, {'SEGMENT_TIME_SIZE': (100, 200),
-                                                 'N_HIDDEN_NEURONS': (10, 20),
-                                                 'BATCH_SIZE': (32, 64)})
+    evaluateBO = BayesianOptimization(evaluate, {'SEGMENT_TIME_SIZE': (100, 1000),
+                                                 'N_HIDDEN_NEURONS': (5, 30),
+                                                 'BATCH_SIZE': (10, 100)})
 
-    evaluateBO.explore({'SEGMENT_TIME_SIZE': [100, 200],
-                        'N_HIDDEN_NEURONS': [10, 20],
-                        'BATCH_SIZE': [32, 64]})
-                        
+    evaluateBO.explore({'SEGMENT_TIME_SIZE': [100, 1000],
+                        'N_HIDDEN_NEURONS': [5, 30],
+                        'BATCH_SIZE': [10, 100]})
+
     evaluateBO.maximize(n_iter=1, **gp_params)
 
     print('Final Results')

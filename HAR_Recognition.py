@@ -182,7 +182,7 @@ if __name__ == '__main__':
                         'N_HIDDEN_NEURONS': [5, 30],
                         'BATCH_SIZE': [10, 100]})
 
-    evaluateBO.maximize(n_iter=1, **gp_params)
+    evaluateBO.maximize(n_iter=10, **gp_params)
 
     print('Final Results')
     print('Evaluation: %f' % evaluateBO.res['max']['max_val'])

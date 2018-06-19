@@ -22,6 +22,7 @@ In contrary to the previous project, a Bayesiyan Optimization was run to optimiz
 _SEGMENT TIME SIZE, NUMBER OF HIDDEN NEURONS, BATCH SIZE_. There was not any apparent correlation between the variables (see below).
 ![Accuracy vs. neurons, batch size](images/accuracy_numHiddenNeurons_batchSize.png)
 ![Accuracy vs. segment, neurons](images/accuracy_segmentTimeSize_numHiddenNeurons.png)
+
 The maximum accuracy of _95%_ has been achieved with _*SEGMENT TIME SIZE = 200, NUMBER OF HIDDEN NEURONS = 30, BATCH SIZE = 10*_.
 
 

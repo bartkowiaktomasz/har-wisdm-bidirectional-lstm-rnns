@@ -52,9 +52,6 @@ N_EPOCHS = 30
 L2_LOSS = 0.0015
 LEARNING_RATE = 0.0025
 
-# Hyperparameters-optimized (Bayesian optimization appends to that list)
-hyperparametersOptimized = {'SEGMENT_TIME_SIZE': [], 'N_HIDDEN_NEURONS': [], 'BATCH_SIZE': [], 'ACCURACY': []}
-
 ##################################################
 ### FUNCTIONS
 ##################################################
@@ -154,6 +151,8 @@ def evaluate(SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS, BATCH_SIZE):
         for start, end in zip(range(0, train_count, BATCH_SIZE), range(BATCH_SIZE, train_count + 1, BATCH_SIZE)):
             sess.run(optimizer, feed_dict={X: X_train[start:end], y: y_train[start:end]})
 
+    # Save the model
+    saver.save(sess, 'classificator')
     predictions, acc_final, loss_final = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})
 
     hyperparametersOptimized['SEGMENT_TIME_SIZE'].append(SEGMENT_TIME_SIZE)
@@ -173,18 +172,8 @@ if __name__ == '__main__':
     data['z-axis'].replace({';': ''}, regex=True, inplace=True)
     data = data.dropna()
 
-    gp_params = {"alpha": 1e-5}
-    evaluateBO = BayesianOptimization(evaluate, {'SEGMENT_TIME_SIZE': (100, 1000),
-                                                 'N_HIDDEN_NEURONS': (5, 30),
-                                                 'BATCH_SIZE': (10, 100)})
+    SEGMENT_TIME_SIZE = 180
+    N_HIDDEN_NEURONS = 30
+    BATCH_SIZE = 10
 
-    evaluateBO.explore({'SEGMENT_TIME_SIZE': [100, 1000],
-                        'N_HIDDEN_NEURONS': [5, 30],
-                        'BATCH_SIZE': [10, 100]})
-
-    evaluateBO.maximize(n_iter=10, **gp_params)
-
-    print('Final Results')
-    print('Evaluation: %f' % evaluateBO.res['max']['max_val'])
-
-    np.save('hyperparametersOptimized.npy', hyperparametersOptimized)
+    evaluate(SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS, BATCH_SIZE)

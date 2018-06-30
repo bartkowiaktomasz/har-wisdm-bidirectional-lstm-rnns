@@ -152,7 +152,7 @@ def evaluate(SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS, BATCH_SIZE):
             sess.run(optimizer, feed_dict={X: X_train[start:end], y: y_train[start:end]})
 
     # Save the model
-    saver.save(sess, "./classificator.ckpt")
+    saver.save(sess, 'classificator')
     predictions, acc_final, loss_final = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})
 
     hyperparametersOptimized['SEGMENT_TIME_SIZE'].append(SEGMENT_TIME_SIZE)

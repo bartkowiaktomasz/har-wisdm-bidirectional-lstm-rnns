@@ -5,7 +5,6 @@ from scipy import stats
 from pylab import rcParams
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
-from bayes_opt import BayesianOptimization
 
 import pickle
 
@@ -52,6 +51,11 @@ N_EPOCHS = 30
 L2_LOSS = 0.0015
 LEARNING_RATE = 0.0025
 
+# Hyperparameters optimized using BO
+SEGMENT_TIME_SIZE = 180
+N_HIDDEN_NEURONS = 30
+BATCH_SIZE = 10
+
 ##################################################
 ### FUNCTIONS
 ##################################################
@@ -86,12 +90,7 @@ def createBidirLSTM(X, SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS):
     return tf.matmul(last_output, W['output'] + b['output'])
 
 
-def evaluate(SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS, BATCH_SIZE):
-
-    # Convert to int (Bayesian optimization might select float values)
-    SEGMENT_TIME_SIZE = int(SEGMENT_TIME_SIZE)
-    N_HIDDEN_NEURONS = int(N_HIDDEN_NEURONS)
-    BATCH_SIZE = int(BATCH_SIZE)
+def evaluate(data):
 
     # DATA PREPROCESSING
     data_convoluted = []
@@ -151,14 +150,22 @@ def evaluate(SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS, BATCH_SIZE):
         for start, end in zip(range(0, train_count, BATCH_SIZE), range(BATCH_SIZE, train_count + 1, BATCH_SIZE)):
             sess.run(optimizer, feed_dict={X: X_train[start:end], y: y_train[start:end]})
 
+            _, acc_train, loss_train = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_train, y: y_train})
+            _, acc_test, loss_test = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})
+
+            history['train_loss'].append(loss_train)
+            history['train_acc'].append(acc_train)
+            history['test_loss'].append(loss_test)
+            history['test_acc'].append(acc_test)
+
+            if(i % 5 != 0):
+                continue
+
+            print(f'epoch: {i} test accuracy: {acc_test} loss: {loss_test}')
+
     # Save the model
     saver.save(sess, "./classificator.ckpt")
     predictions, acc_final, loss_final = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})
-
-    hyperparametersOptimized['SEGMENT_TIME_SIZE'].append(SEGMENT_TIME_SIZE)
-    hyperparametersOptimized['N_HIDDEN_NEURONS'].append(N_HIDDEN_NEURONS)
-    hyperparametersOptimized['BATCH_SIZE'].append(BATCH_SIZE)
-    hyperparametersOptimized['ACCURACY'].append(acc_final)
 
     return acc_final
 
@@ -172,8 +179,5 @@ if __name__ == '__main__':
     data['z-axis'].replace({';': ''}, regex=True, inplace=True)
     data = data.dropna()
 
-    SEGMENT_TIME_SIZE = 180
-    N_HIDDEN_NEURONS = 30
-    BATCH_SIZE = 10
-
-    evaluate(SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS, BATCH_SIZE)
+    acc_final = evaluate(data)
+    print("Final accuracy: ", acc_final)

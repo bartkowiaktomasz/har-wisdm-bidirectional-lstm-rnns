@@ -161,8 +161,6 @@ def evaluate(data):
             if(i % 5 != 0):
                 continue
 
-            print(f'epoch: {i} test accuracy: {acc_test} loss: {loss_test}')
-
     # Save the model
     saver.save(sess, "./classificator.ckpt")
     predictions, acc_final, loss_final = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})

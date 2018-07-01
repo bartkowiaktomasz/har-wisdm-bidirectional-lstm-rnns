@@ -136,7 +136,6 @@ def evaluate(data):
     # TRAINING
     saver = tf.train.Saver()
 
-    history = dict(train_loss=[], train_acc=[], test_loss=[], test_acc=[])
     sess = tf.InteractiveSession()
     sess.run(tf.global_variables_initializer())
 
@@ -148,11 +147,6 @@ def evaluate(data):
 
             _, acc_train, loss_train = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_train, y: y_train})
             _, acc_test, loss_test = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})
-
-            history['train_loss'].append(loss_train)
-            history['train_acc'].append(acc_train)
-            history['test_loss'].append(loss_test)
-            history['test_acc'].append(acc_test)
 
             if(i % 5 != 0):
                 continue

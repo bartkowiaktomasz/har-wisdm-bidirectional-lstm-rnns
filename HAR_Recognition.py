@@ -50,7 +50,7 @@ LEARNING_RATE = 0.0025
 # Hyperparameters optimized using BO
 SEGMENT_TIME_SIZE = 180
 N_HIDDEN_NEURONS = 30
-BATCH_SIZE = 10
+BATCH_SIZE = 32
 
 ##################################################
 ### FUNCTIONS
@@ -148,10 +148,10 @@ def evaluate(data):
             _, acc_train, loss_train = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_train, y: y_train})
             _, acc_test, loss_test = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})
 
-            if(i % 5 != 0):
+            if(i % 2 != 0):
                 continue
 
-            print(f'epoch: {i} test accuracy: {acc_test} loss: {loss_test}')
+            print('epoch: {} test accuracy: {} loss: {}'.format(i, acc_test, loss_test))
 
     # Save the model
     saver.save(sess, "./classificator.ckpt")

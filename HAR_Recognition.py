@@ -2,14 +2,10 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from scipy import stats
-from pylab import rcParams
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 
 import pickle
-
-import matplotlib
-import matplotlib.pyplot as plt
 
 from tempfile import TemporaryFile
 
@@ -160,6 +156,8 @@ def evaluate(data):
 
             if(i % 5 != 0):
                 continue
+
+            print(f'epoch: {i} test accuracy: {acc_test} loss: {loss_test}')
 
     # Save the model
     saver.save(sess, "./classificator.ckpt")

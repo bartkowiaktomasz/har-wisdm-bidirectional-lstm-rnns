@@ -130,7 +130,7 @@ def train_evaluate_classifier(data_convoluted, labels):
             if(i % 5 != 0):
                 continue
 
-            print(f'epoch: {i} test accuracy: {acc_test} loss: {loss_test}')
+            print('epoch: {} test accuracy: {} loss: {}'.format(i, acc_test, loss_test))
 
     # Save the model
     saver.save(sess, "./classificator.ckpt")

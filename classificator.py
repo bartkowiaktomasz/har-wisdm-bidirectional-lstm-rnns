@@ -78,10 +78,15 @@ def evaluate(model_meta_path, model_checkpoint_path, X_test, y_test):
 ##################################################
 if __name__ == '__main__':
 
+
     # LOAD DATA
     data = pd.read_csv(DATA_PATH, header=None, names=COLUMN_NAMES)
     data['z-axis'].replace({';': ''}, regex=True, inplace=True)
     data = data.dropna()
+
+    print(data.head, data.shape)
+
+    # data = pd.read_pickle('data_ble_standing.pkl')
 
     data_convoluted, labels = get_convoluted_data(data, SEGMENT_TIME_SIZE, TIME_STEP)
 

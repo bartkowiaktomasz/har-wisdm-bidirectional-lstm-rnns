@@ -44,7 +44,7 @@ N_FEATURES = 3  # x-acceleration, y-acceleration, z-acceleration
 
 # Hyperparameters
 N_LSTM_LAYERS = 2
-N_EPOCHS = 1
+N_EPOCHS = 50
 L2_LOSS = 0.0015
 LEARNING_RATE = 0.0025
 
@@ -84,10 +84,10 @@ def createBidirLSTM(X, SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS):
 
     # Get output for the last time step from a "many to one" architecture
     last_output = outputs[-1]
-    return tf.matmul(last_output, W['output'] + b['output'])
+    return tf.matmul(last_output, W['output'] + b['output'], name="lstm_model")
 
 
-def evaluate(data_convoluted, labels):
+def train_evaluate_classifier(data_convoluted, labels):
 
     # SPLIT INTO TRAINING AND TEST SETS
     X_train, X_test, y_train, y_test = train_test_split(data_convoluted, labels, test_size=0.3, random_state=RANDOM_SEED)
@@ -98,10 +98,10 @@ def evaluate(data_convoluted, labels):
 
     # Placeholders
     X = tf.placeholder(tf.float32, [None, SEGMENT_TIME_SIZE, N_FEATURES], name="X")
-    y = tf.placeholder(tf.float32, [None, N_CLASSES])
+    y = tf.placeholder(tf.float32, [None, N_CLASSES], name="y")
 
     y_pred = createBidirLSTM(X, SEGMENT_TIME_SIZE, N_HIDDEN_NEURONS)
-    y_pred_softmax = tf.nn.softmax(y_pred)
+    y_pred_softmax = tf.nn.softmax(y_pred, name="y_pred_softmax")
 
     # LOSS
     l2 = L2_LOSS * sum(tf.nn.l2_loss(i) for i in tf.trainable_variables())
@@ -133,7 +133,7 @@ def evaluate(data_convoluted, labels):
             print(f'epoch: {i} test accuracy: {acc_test} loss: {loss_test}')
 
     # Save the model
-    # saver.save(sess, "./classificator.ckpt")
+    saver.save(sess, "./classificator.ckpt")
     predictions, acc_final, loss_final = sess.run([y_pred_softmax, accuracy, loss], feed_dict={X: X_test, y: y_test})
 
     return acc_final
@@ -144,5 +144,5 @@ def evaluate(data_convoluted, labels):
 if __name__ == '__main__':
 
     data_convoluted, labels = get_convoluted_data(DATA_PATH, COLUMN_NAMES, SEGMENT_TIME_SIZE, TIME_STEP)
-    acc_final = evaluate(data_convoluted, labels)
+    acc_final = train_evaluate_classifier(data_convoluted, labels)
     print("Final accuracy: ", acc_final)

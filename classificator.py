@@ -78,10 +78,15 @@ def evaluate(model_meta_path, model_checkpoint_path, X_test, y_test):
 ##################################################
 if __name__ == '__main__':
 
-    data_convoluted, labels = get_convoluted_data(DATA_PATH, COLUMN_NAMES, SEGMENT_TIME_SIZE, TIME_STEP)
+    # LOAD DATA
+    data = pd.read_csv(DATA_PATH, header=None, names=COLUMN_NAMES)
+    data['z-axis'].replace({';': ''}, regex=True, inplace=True)
+    data = data.dropna()
+
+    data_convoluted, labels = get_convoluted_data(data, SEGMENT_TIME_SIZE, TIME_STEP)
 
     # SPLIT INTO TRAINING AND TEST SETS
-    _, X_test, _, y_test = train_test_split(data_convoluted, labels, test_size=0.3, random_state=RANDOM_SEED)
+    _, X_test, _, y_test = train_test_split(data_convoluted, labels, test_size=0.05, random_state=RANDOM_SEED)
 
     accuracy = evaluate(MODEL_META_PATH, MODEL_CHECKPOINT_PATH, X_test, y_test)
     print("Final accuracy: ", accuracy)

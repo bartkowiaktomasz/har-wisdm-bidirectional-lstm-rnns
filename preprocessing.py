@@ -4,12 +4,7 @@ import pandas as pd
 from scipy import stats
 
 # Returns a tuple consisting of a convoluted data and labels
-def get_convoluted_data(data_path, column_names, segment_time_size, time_step):
-
-    # LOAD DATA
-    data = pd.read_csv(data_path, header=None, names=column_names)
-    data['z-axis'].replace({';': ''}, regex=True, inplace=True)
-    data = data.dropna()
+def get_convoluted_data(data, segment_time_size, time_step):
 
     data_convoluted = []
     labels = []
